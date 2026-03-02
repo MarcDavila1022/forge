@@ -36,9 +36,9 @@ on:
   - 'v*'
 jobs:
   release:
-  runs-on: ubuntu-latest
-  steps:
-  - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 `
 
 // initCmd represents the init command
