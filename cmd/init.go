@@ -1,14 +1,45 @@
 /*
 Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"fmt"
+	"os"
+	"text/template"
 
 	"github.com/spf13/cobra"
+
+	"os/exec"
+
+	"bytes"
 )
+
+type WorkflowConfig struct {
+	RepoName string
+}
+
+func getRepoName() string {
+	remoteName, _ := exec.Command("git", "remote", "get-url", "origin").CombinedOutput()
+
+	startIdx := bytes.LastIndex(remoteName, []byte("/")) + 1
+	endIdx := bytes.LastIndex(remoteName, []byte("."))
+
+	return string(remoteName[startIdx:endIdx])
+
+}
+
+var workflowTemplate = `name: Secure Release - {{.RepoName}}
+on: 
+  push:
+  tags:
+  - 'v*'
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+`
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -21,7 +52,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("init called")
+		config := WorkflowConfig{
+			RepoName: getRepoName(),
+		}
+		tmpl := template.Must(template.New("workflow").Parse(workflowTemplate))
+		var buf bytes.Buffer
+		tmpl.Execute(&buf, config)
+
+		os.MkdirAll(".github/workflows", 0755)
+
+		os.WriteFile(".github/workflows/secure-release.yml", buf.Bytes(), 0644)
+		fmt.Println("Created .github/workflows/secure-release.yml")
+
 	},
 }
 
