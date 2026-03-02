@@ -29,16 +29,33 @@ func getRepoName() string {
 
 }
 
-var workflowTemplate = `name: Secure Release - {{.RepoName}}
-on: 
+var workflowTemplate = `name: Secure Release - [[.RepoName]]
+on:
   push:
-  tags:
-  - 'v*'
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
-    steps:
+    steps: 
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Build
+        run: |
+          mkdir -p dist
+          GOOS=darwin GOARCH=arm64 go build -o dist/forge-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 go build -o dist/forge-linux-amd64 .
+          
+      - name: Create Release
+        run: |
+          gh release create ${{ github.ref_name }} dist/* --generate-notes
+        env: 
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 `
 
 // initCmd represents the init command
@@ -55,7 +72,7 @@ to quickly create a Cobra application.`,
 		config := WorkflowConfig{
 			RepoName: getRepoName(),
 		}
-		tmpl := template.Must(template.New("workflow").Parse(workflowTemplate))
+		tmpl := template.Must(template.New("workflow").Delims("[[", "]]").Parse(workflowTemplate))
 		var buf bytes.Buffer
 		tmpl.Execute(&buf, config)
 

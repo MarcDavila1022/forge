@@ -1,5 +1,4 @@
-name: Release
-  
+name: Secure Release - forge
 on:
   push:
     tags:
