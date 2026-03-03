@@ -51,6 +51,13 @@ jobs:
           mkdir -p dist
           GOOS=darwin GOARCH=arm64 go build -o dist/forge-darwin-arm64 .
           GOOS=linux GOARCH=amd64 go build -o dist/forge-linux-amd64 .
+          GOOS=windows GOARCH=amd64 go build -o dist/forge-windows-amd64.exe .
+          GOOS=linux GOARCH=arm64 go build -o dist/forge-linux-arm64 .
+          GOOS=darwin GOARCH=amd64 go build -o dist/forge-darwin-amd64 .
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: dist/*  
