@@ -36,6 +36,7 @@ on:
       - 'v*'
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -50,7 +51,9 @@ jobs:
           mkdir -p dist
           GOOS=darwin GOARCH=arm64 go build -o dist/forge-darwin-arm64 .
           GOOS=linux GOARCH=amd64 go build -o dist/forge-linux-amd64 .
-          
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*  
       - name: Create Release
         run: |
           gh release create ${{ github.ref_name }} dist/* --generate-notes
