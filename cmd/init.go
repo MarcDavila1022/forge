@@ -17,6 +17,7 @@ import (
 
 type WorkflowConfig struct {
 	RepoName string
+	ScanGate bool
 }
 
 func getRepoName() string {
@@ -46,14 +47,20 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.21'
+[[ if .ScanGate ]]
+      - name: Install forge
+        run: go install github.com/marcdavila/forge@latest
+      - name: Vulnerability Gate
+        run: forge scan --severity high
+[[ end ]]
       - name: Build
         run: |
           mkdir -p dist
-          GOOS=darwin GOARCH=arm64 go build -o dist/forge-darwin-arm64 .
-          GOOS=linux GOARCH=amd64 go build -o dist/forge-linux-amd64 .
-          GOOS=windows GOARCH=amd64 go build -o dist/forge-windows-amd64.exe .
-          GOOS=linux GOARCH=arm64 go build -o dist/forge-linux-arm64 .
-          GOOS=darwin GOARCH=amd64 go build -o dist/forge-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ github.ref_name }}'" -o dist/forge-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ github.ref_name }}'" -o dist/forge-linux-amd64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ github.ref_name }}'" -o dist/forge-windows-amd64.exe .
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ github.ref_name }}'" -o dist/forge-linux-arm64 .
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ github.ref_name }}'" -o dist/forge-darwin-amd64 .
       - name: Generate checksums
         run: |
           cd dist
@@ -67,6 +74,7 @@ jobs:
         env: 
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 `
+var scanGateFlag bool
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -81,6 +89,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := WorkflowConfig{
 			RepoName: getRepoName(),
+			ScanGate: scanGateFlag,
 		}
 		tmpl := template.Must(template.New("workflow").Delims("[[", "]]").Parse(workflowTemplate))
 		var buf bytes.Buffer
@@ -96,6 +105,7 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(initCmd)
+	initCmd.Flags().BoolVar(&scanGateFlag, "scan-gate", false, "Inject a vulnerability gate step into the workflow")
 
 	// Here you will define your flags and configuration settings.
 
