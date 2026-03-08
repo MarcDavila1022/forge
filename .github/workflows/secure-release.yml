@@ -11,8 +11,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps: 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # pin: v4  # pin: v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # pin: v5
         with:
           go-version: '1.21'
 
@@ -28,7 +28,7 @@ jobs:
         run: |
           cd dist
           sha256sum * > checksums.txt
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # pin: v2
         with:
           subject-path: dist/*  
       - name: Create Release

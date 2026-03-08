@@ -17,9 +17,15 @@ type RequiredPolicy struct {
 	Provenance bool `yaml:"provenance"`
 }
 
+type HardenConfig struct {
+	Dir  string `yaml:"dir"`
+	Skip string `yaml:"skip"`
+}
+
 type ForgeConfig struct {
 	Repo    string         `yaml:"repo"`
 	Require RequiredPolicy `yaml:"require"`
+	Harden  HardenConfig   `yaml:"harden"`
 }
 
 // verifyCmd represents the verify command
