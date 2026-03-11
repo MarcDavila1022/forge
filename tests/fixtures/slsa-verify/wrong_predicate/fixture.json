@@ -1,0 +1,55 @@
+{
+  "forge_args": [
+    "slsa",
+    "--workflow", ".github/workflows/secure-release.yml",
+    "--mode", "verify",
+    "--artifact", "dist/forge",
+    "--signer-workflow", ".github/workflows/build-and-attest.yml",
+    "--source-ref", "refs/tags/v1.2.3",
+    "--deny-self-hosted-runners"
+  ],
+  "expected_level": 1,
+  "output_contains": [
+    "Verified SLSA Build Level: L1",
+    "Attestation does not use SLSA provenance predicate type"
+  ],
+  "gh_args_contains": [
+    "--deny-self-hosted-runners",
+    "--signer-workflow",
+    ".github/workflows/build-and-attest.yml",
+    "--source-ref",
+    "refs/tags/v1.2.3"
+  ],
+  "json_verification_result": "FAILED",
+  "json_verified_levels": [
+    "SLSA_BUILD_LEVEL_1"
+  ],
+  "json_checks": [
+    {
+      "name": "attestation_valid",
+      "level": "L2",
+      "result": "PASS"
+    },
+    {
+      "name": "provenance_predicate_correct",
+      "level": "L2",
+      "result": "FAIL",
+      "detail_contains": "does not use SLSA provenance"
+    },
+    {
+      "name": "runner_policy_enforced",
+      "level": "L2",
+      "result": "PASS"
+    },
+    {
+      "name": "signer_workflow_matches",
+      "level": "L3",
+      "result": "PASS"
+    },
+    {
+      "name": "source_ref_matches",
+      "level": "L3",
+      "result": "PASS"
+    }
+  ]
+}

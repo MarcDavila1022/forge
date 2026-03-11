@@ -1,0 +1,19 @@
+name: Build and Attest
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+permissions:
+  id-token: write
+  attestations: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - run: echo build
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: dist/*

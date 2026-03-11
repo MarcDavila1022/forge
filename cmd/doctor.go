@@ -5,7 +5,7 @@ package cmd
 
 import (
 	"fmt"
-
+	"os"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -55,6 +55,11 @@ and usage of using your command. For example:.`,
 					fmt.Printf("\u2705 git remote exists\n")
 				}
 			}
+		}
+		if os.Getenv("GH_TOKEN") == "" {
+			fmt.Printf("\u26A0\uFE0F GH_TOKEN is not set - forge harden may hit GitHub API rate limits\n")
+		} else {
+			fmt.Printf("\u2705 GH_TOKEN is set\n")
 		}
 	},
 }

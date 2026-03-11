@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT_DIR"
+
+GOCACHE_DIR="$ROOT_DIR/.tmp/gocache"
+mkdir -p "$GOCACHE_DIR"
+
+run_test() {
+  env GOCACHE="$GOCACHE_DIR" go test ./tests "$@"
+}
+
+case "${1:-all}" in
+  all)
+    run_test
+    ;;
+  init)
+    run_test -run '^TestInitL3UsesLocalReusableWorkflow$'
+    ;;
+  harden)
+    run_test -run '^TestHardenVerifyRejectsMutableExternalRefs$'
+    ;;
+  slsa-static)
+    run_test -run '^TestSLSAStaticReportsEstimatedLevel$'
+    ;;
+  slsa-verify)
+    if [ "${2:-}" != "" ]; then
+      run_test -run "TestSLSAVerifyFixtures/${2}"
+    else
+      run_test -run '^TestSLSAVerifyFixtures$'
+    fi
+    ;;
+  scan)
+    run_test -run '^TestScanReportsGovulncheckFindings$'
+    ;;
+  *)
+    echo "usage: ./tests/run [all|init|harden|slsa-static|slsa-verify [fixture]|scan]" >&2
+    exit 1
+    ;;
+esac

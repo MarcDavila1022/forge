@@ -1,0 +1,6 @@
+name: Secure Release
+jobs:
+  release:
+    uses: ./.github/workflows/build-and-attest.yml
+    with:
+      version: ${{ github.ref_name }}
