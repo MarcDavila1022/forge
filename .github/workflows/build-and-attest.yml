@@ -1,0 +1,39 @@
+name: Build and Attest (Reusable)
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # pin: v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # pin: v5
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        run: |
+          mkdir -p dist
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ inputs.version }}'" -o dist/forge-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ inputs.version }}'" -o dist/forge-linux-amd64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ inputs.version }}'" -o dist/forge-windows-amd64.exe .
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ inputs.version }}'" -o dist/forge-linux-arm64 .
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/marcdavila/forge/cmd.Version=${{ inputs.version }}'" -o dist/forge-darwin-amd64 .
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # pin: v2
+        with:
+          subject-path: dist/*
+      - name: Create Release
+        run: gh release create ${{ inputs.version }} dist/* --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 
 	"encoding/json"
 	"os"
@@ -32,6 +33,15 @@ var severityOrder = map[string]int{
 	"medium":   2,
 	"low":      1,
 	"unknown":  0,
+}
+var osvHTTPClient = &http.Client{Timeout: 5 * time.Second}
+
+func osvURL(id string) string {
+	base := strings.TrimRight(os.Getenv("FORGE_OSV_BASE_URL"), "/")
+	if base == "" {
+		base = "https://api.osv.dev/v1/vulns"
+	}
+	return base + "/" + id
 }
 
 type GovulncheckMessage struct {
@@ -117,7 +127,7 @@ func parseGovulncheck(data []byte) []Finding {
 }
 
 func enrichFromOSV(f *Finding) {
-	resp, err := http.Get("https://api.osv.dev/v1/vulns/" + f.ID)
+	resp, err := osvHTTPClient.Get(osvURL(f.ID))
 	if err != nil {
 		return
 	}
@@ -145,7 +155,7 @@ func enrichFromOSV(f *Finding) {
 
 	for _, alias := range osv.Aliases {
 		if strings.HasPrefix(alias, "GHSA-") {
-			r2, err := http.Get("https://api.osv.dev/v1/vulns/" + alias)
+			r2, err := osvHTTPClient.Get(osvURL(alias))
 			if err != nil {
 				continue
 			}

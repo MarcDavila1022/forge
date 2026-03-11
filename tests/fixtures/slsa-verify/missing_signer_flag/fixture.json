@@ -1,0 +1,57 @@
+{
+  "forge_args": [
+    "slsa",
+    "--workflow", ".github/workflows/secure-release.yml",
+    "--mode", "verify",
+    "--artifact", "dist/forge",
+    "--source-ref", "refs/tags/v1.2.3",
+    "--deny-self-hosted-runners"
+  ],
+  "expected_level": 2,
+  "output_contains": [
+    "Verified SLSA Build Level: L2",
+    "Use --signer-workflow to verify the exact build workflow",
+    "Source ref matches: refs/tags/v1.2.3"
+  ],
+  "gh_args_contains": [
+    "--source-ref",
+    "refs/tags/v1.2.3",
+    "--deny-self-hosted-runners"
+  ],
+  "gh_args_not_contains": [
+    "--signer-workflow"
+  ],
+  "json_verification_result": "FAILED",
+  "json_verified_levels": [
+    "SLSA_BUILD_LEVEL_2"
+  ],
+  "json_checks": [
+    {
+      "name": "attestation_valid",
+      "level": "L2",
+      "result": "PASS"
+    },
+    {
+      "name": "provenance_predicate_correct",
+      "level": "L2",
+      "result": "PASS"
+    },
+    {
+      "name": "runner_policy_enforced",
+      "level": "L2",
+      "result": "PASS"
+    },
+    {
+      "name": "signer_workflow_matches",
+      "level": "L3",
+      "result": "FAIL",
+      "detail_contains": "Use --signer-workflow"
+    },
+    {
+      "name": "source_ref_matches",
+      "level": "L3",
+      "result": "PASS",
+      "detail_contains": "refs/tags/v1.2.3"
+    }
+  ]
+}

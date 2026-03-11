@@ -1,0 +1,15 @@
+{
+  "forge_args": [
+    "slsa",
+    "--workflow", ".github/workflows/secure-release.yml",
+    "--mode", "verify",
+    "--signer-workflow", ".github/workflows/build-and-attest.yml",
+    "--source-ref", "refs/tags/v1.2.3",
+    "--deny-self-hosted-runners"
+  ],
+  "expected_exit_code": 2,
+  "output_contains": [
+    "Verify mode requires --artifact <path>. Use --mode static for config-only analysis."
+  ],
+  "expect_gh_invoked": false
+}

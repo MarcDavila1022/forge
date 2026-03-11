@@ -1,8 +1,4 @@
-name: Secure Release - forge
-on:
-  push:
-    tags:
-      - 'v*'
+name: Secure Release
 jobs:
   release:
     uses: ./.github/workflows/build-and-attest.yml

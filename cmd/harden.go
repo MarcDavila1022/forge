@@ -44,6 +44,7 @@ type GitRefResponse struct {
 }
 
 var shaCache = map[string]string{}
+var shaRefPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 
 func directoryFind(dir string) ([]string, error) {
 	var lis []string
@@ -113,17 +114,39 @@ func category(ref ActionRef) RefKind {
 		return KindLocal
 	} else if strings.HasPrefix(ref.Value, "docker://") {
 		return KindDocker
-	} else if strings.Contains(ref.Value, ".github/workflows/") {
+	}
+	if isImmutableReference(ref.Value) {
+		return KindPin
+	}
+	if strings.Contains(ref.Value, ".github/workflows/") {
 		return KindReusable
 	}
-	parts := strings.Split(ref.Value, "@")
-	if len(parts) >= 2 {
-		matched, _ := regexp.MatchString(`^[0-9a-fA-F]{40}$`, parts[1])
-		if matched {
-			return KindPin
-		}
-	}
 	return KindAction
+}
+
+func splitRef(value string) (string, string, bool) {
+	parts := strings.SplitN(value, "@", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+func isImmutableReference(value string) bool {
+	if strings.HasPrefix(value, "./") || strings.HasPrefix(value, "docker://") {
+		return true
+	}
+	_, ref, ok := splitRef(value)
+	return ok && shaRefPattern.MatchString(ref)
+}
+
+func isResolvableGitHubReference(value string) bool {
+	base, _, ok := splitRef(value)
+	if !ok {
+		return false
+	}
+	parts := strings.Split(base, "/")
+	return len(parts) >= 2
 }
 
 func shouldSkip(value string, skipList string) bool {
@@ -159,11 +182,16 @@ func resolveRefToSHA(value string) (string, error) {
 	if ok {
 		return v, nil
 	}
-	firstSplit := strings.Split(value, "@")
-	reference := firstSplit[1]
-	secondSplit := strings.Split(firstSplit[0], "/")
-	owner := secondSplit[0]
-	repo := secondSplit[1]
+	base, reference, ok := splitRef(value)
+	if !ok {
+		return "", fmt.Errorf("ref cannot be resolved")
+	}
+	parts := strings.Split(base, "/")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("ref cannot be resolved")
+	}
+	owner := parts[0]
+	repo := parts[1]
 
 	tagUrl := "https://api.github.com/repos/" + owner + "/" + repo + "/git/ref/tags/" + reference
 
@@ -251,7 +279,6 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("harden called")
 		if configData, err := os.ReadFile("forge.yml"); err == nil {
 			var config ForgeConfig
 			if yaml.Unmarshal(configData, &config) == nil {
@@ -282,9 +309,9 @@ to quickly create a Cobra application.`,
 						continue
 					}
 					kind := category(ref)
-					if kind == KindAction {
+					if kind == KindAction || kind == KindReusable {
 						amount += 1
-						fmt.Printf("unpinned: %s (line %d)\n", ref.Value, ref.Line)
+						fmt.Printf("mutable external ref: %s (line %d)\n", ref.Value, ref.Line)
 					}
 				}
 				continue
@@ -295,7 +322,11 @@ to quickly create a Cobra application.`,
 					continue
 				}
 				kind := category(ref)
-				if kind == KindAction {
+				if kind == KindAction || kind == KindReusable {
+					if !isResolvableGitHubReference(ref.Value) {
+						fmt.Printf("warning: %s (line %d) cannot be resolved to a GitHub SHA\n", ref.Value, ref.Line)
+						continue
+					}
 					sha, shaErr := resolveRefToSHA(ref.Value)
 					if shaErr != nil {
 						fmt.Println("error:", shaErr)
@@ -303,8 +334,6 @@ to quickly create a Cobra application.`,
 					}
 					resolved[ref.Value] = sha
 					fmt.Printf("%s → %s\n", ref.Value, sha)
-				} else if kind == KindReusable {
-					fmt.Printf("warning: reusable workflow %s (line %d) cannot be auto-pinned\n", ref.Value, ref.Line)
 				}
 			}
 			if !dryRun {
@@ -313,10 +342,10 @@ to quickly create a Cobra application.`,
 		}
 		if verify {
 			if amount > 0 {
-				fmt.Printf("Currently you have %v dependencies unpinned \n", amount)
+				fmt.Printf("Currently you have %v mutable external refs\n", amount)
 				os.Exit(1)
 			}
-			fmt.Println("all actions are pinned")
+			fmt.Println("all external workflow refs are immutable")
 		}
 
 	},
